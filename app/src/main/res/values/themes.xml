@@ -1,0 +1,5 @@
+<resources>
+    <style name="Theme.DreamWedding" parent="@android:style/Theme.DeviceDefault.NoActionBar">
+        <item name="android:windowBackground">@color/tv_background_primary</item>
+    </style>
+</resources>

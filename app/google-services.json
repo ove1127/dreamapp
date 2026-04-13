@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "17063099597",
+    "project_id": "dreamwedding-fc110",
+    "storage_bucket": "dreamwedding-fc110.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:17063099597:android:c87e5a1c2fa793170d7d84",
+        "android_client_info": {
+          "package_name": "com.dreamweddingstories.tv"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyARUO65E7w55NQPsSRE2O1-LBTTWxHo9Lk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
