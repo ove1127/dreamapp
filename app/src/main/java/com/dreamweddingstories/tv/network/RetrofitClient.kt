@@ -9,10 +9,12 @@ import retrofit2.converter.gson.GsonConverterFactory
 object RetrofitClient {
     fun createVimeoApiService(): VimeoApiService {
         val logger = HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BASIC
+            level = HttpLoggingInterceptor.Level.BODY
         }
 
         val okHttpClient = OkHttpClient.Builder()
+            .connectTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(15, java.util.concurrent.TimeUnit.SECONDS)
             .addInterceptor { chain ->
                 val request = chain.request().newBuilder()
                     .addHeader("Authorization", "Bearer ${Constants.VIMEO_ACCESS_TOKEN}")

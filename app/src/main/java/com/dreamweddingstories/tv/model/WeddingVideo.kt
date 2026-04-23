@@ -8,5 +8,6 @@ data class WeddingVideo(
     val description: String = "",
     val thumbnailUrl: String = "",
     val duration: String = "",
+    val category: String = "",
     val userId: String = ""   // links to the logged-in user
 )

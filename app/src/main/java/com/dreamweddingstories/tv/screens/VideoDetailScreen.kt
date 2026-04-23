@@ -154,18 +154,6 @@ fun VideoDetailScreen(
                         )
                 )
 
-                // Auto-focus play button when content loads but wait for animation
-                LaunchedEffect(contentVisible.value) {
-                    if (contentVisible.value) {
-                        try {
-                            kotlinx.coroutines.delay(300) // Wait for entrance animation
-                            playFocusRequester.requestFocus()
-                        } catch (e: IllegalStateException) {
-                            // Ignored if still not initialized
-                        }
-                    }
-                }
-
                 // ── Content ──
                 AnimatedVisibility(
                     visible = contentVisible.value,
@@ -218,6 +206,14 @@ fun VideoDetailScreen(
                             }
                             
                             Spacer(modifier = Modifier.height(64.dp))
+
+                            // Auto-focus play button after animation completes
+                            LaunchedEffect(Unit) {
+                                kotlinx.coroutines.delay(700)
+                                try {
+                                    playFocusRequester.requestFocus()
+                                } catch (_: Exception) { }
+                            }
 
                             // ── Action buttons ──
                             Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {

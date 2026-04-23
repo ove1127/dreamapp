@@ -2,9 +2,12 @@
 
 package com.dreamweddingstories.tv.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -25,6 +28,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,6 +57,7 @@ import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
+import com.dreamweddingstories.tv.components.VimeoPreview
 import com.dreamweddingstories.tv.model.UiState
 import com.dreamweddingstories.tv.model.User
 import com.dreamweddingstories.tv.model.WeddingVideo
@@ -127,7 +132,7 @@ fun HomeScreen(
 
             is UiState.Success -> {
                 val videos = videosState.data
-                val featured = videos.firstOrNull()
+                val featured = videos.firstOrNull { it.category == "Trailer" } ?: videos.firstOrNull()
 
                 if (featured != null) {
                     var focusedVideo by remember { mutableStateOf(featured) }
@@ -189,48 +194,92 @@ fun HomeScreen(
                             Spacer(modifier = Modifier.height(32.dp))
                         }
 
-                        // ── Row 1: Your Wedding Films ──
-                        item {
-                            VideoRow(
-                                title = "Your Wedding Films",
-                                videos = videos,
-                                onVideoSelected = onVideoSelected,
-                                onFocus = { focusedVideo = it }
-                            )
-                            Spacer(modifier = Modifier.height(24.dp))
-                        }
-
-                        // ── Row 2: Cinematic Highlights ──
-                        item {
-                            // Dummy shuffle to create a distinct row look without backend changes
-                            VideoRow(
-                                title = "Cinematic Highlights",
-                                videos = videos.shuffled(),
-                                onVideoSelected = onVideoSelected,
-                                onFocus = { focusedVideo = it }
-                            )
-                            Spacer(modifier = Modifier.height(24.dp))
-                        }
+                        val mainFilms = videos.filter { it.category == "Main Film" }
+                        val reels = videos.filter { it.category == "Reel" }
+                        val uncategorized = videos.filter { it.category != "Trailer" && it.category != "Main Film" && it.category != "Reel" }
                         
-                        // ── Row 3: Trending Ceremonies ──
-                        item {
-                            VideoRow(
-                                title = "Trending Ceremonies",
-                                videos = videos.shuffled(),
-                                onVideoSelected = onVideoSelected,
-                                onFocus = { focusedVideo = it }
-                            )
-                            Spacer(modifier = Modifier.height(24.dp))
-                        }
-
-                        // ── Row 4: Recently Added ──
-                        item {
-                            VideoRow(
-                                title = "Recently Added",
-                                videos = videos.reversed(),
-                                onVideoSelected = onVideoSelected,
-                                onFocus = { focusedVideo = it }
-                            )
+                        val isCategorized = mainFilms.isNotEmpty() || reels.isNotEmpty()
+                        
+                        if (isCategorized) {
+                            if (mainFilms.isNotEmpty()) {
+                                item {
+                                    VideoRow(
+                                        title = "Your Cinematic Films",
+                                        videos = mainFilms,
+                                        onVideoSelected = onVideoSelected,
+                                        onFocus = { focusedVideo = it }
+                                    )
+                                    Spacer(modifier = Modifier.height(32.dp))
+                                }
+                            }
+                            
+                            if (reels.isNotEmpty()) {
+                                item {
+                                    VideoRow(
+                                        title = "Social Media Reels",
+                                        videos = reels,
+                                        onVideoSelected = onVideoSelected,
+                                        onFocus = { focusedVideo = it }
+                                    )
+                                    Spacer(modifier = Modifier.height(32.dp))
+                                }
+                            }
+                            
+                            if (uncategorized.isNotEmpty()) {
+                                item {
+                                    VideoRow(
+                                        title = "More Memories",
+                                        videos = uncategorized,
+                                        onVideoSelected = onVideoSelected,
+                                        onFocus = { focusedVideo = it }
+                                    )
+                                    Spacer(modifier = Modifier.height(32.dp))
+                                }
+                            }
+                        } else {
+                            // ── Row 1: Your Wedding Films ──
+                            item {
+                                VideoRow(
+                                    title = "Your Wedding Films",
+                                    videos = videos,
+                                    onVideoSelected = onVideoSelected,
+                                    onFocus = { focusedVideo = it }
+                                )
+                                Spacer(modifier = Modifier.height(24.dp))
+                            }
+    
+                            // ── Row 2: Cinematic Highlights ──
+                            item {
+                                // Dummy shuffle to create a distinct row look without backend changes
+                                VideoRow(
+                                    title = "Cinematic Highlights",
+                                    videos = videos.shuffled(),
+                                    onVideoSelected = onVideoSelected,
+                                    onFocus = { focusedVideo = it }
+                                )
+                                Spacer(modifier = Modifier.height(24.dp))
+                            }
+                            
+                            // ── Row 3: Trending Ceremonies ──
+                            item {
+                                VideoRow(
+                                    title = "Trending Ceremonies",
+                                    videos = videos.shuffled(),
+                                    onVideoSelected = onVideoSelected,
+                                    onFocus = { focusedVideo = it }
+                                )
+                                Spacer(modifier = Modifier.height(24.dp))
+                            }
+    
+                            // ── Row 4: Recently Added ──
+                            item {
+                                VideoRow(
+                                    title = "Recently Added",
+                                    videos = videos.reversed(),
+                                    onVideoSelected = onVideoSelected,
+                                    onFocus = { focusedVideo = it }
+                                )
+                            }
                         }
                     }
                 }
@@ -356,13 +405,20 @@ private fun HeroBanner(
             .clip(RoundedCornerShape(24.dp))
             .border(1.dp, AccentWhite.copy(alpha = 0.1f), RoundedCornerShape(24.dp))
     ) {
-        // Background thumbnail
-        AsyncImage(
-            model = video.thumbnailUrl,
-            contentDescription = video.coupleNames,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxSize()
-        )
+        // Background video preview (muted autoplay)
+        if (video.vimeoVideoId.isNotBlank()) {
+            VimeoPreview(
+                vimeoVideoId = video.vimeoVideoId,
+                modifier = Modifier.fillMaxSize()
+            )
+        } else {
+            AsyncImage(
+                model = video.thumbnailUrl,
+                contentDescription = video.coupleNames,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize()
+            )
+        }
 
         // Horizontal gradient scrim (left-to-right)
         Box(
@@ -512,6 +568,17 @@ private fun VideoCard(video: WeddingVideo, onClick: () -> Unit, onFocus: () -> U
             )
         )
     ) {
+        // Track if preview should show (delayed after focus)
+        var showPreview by remember { mutableStateOf(false) }
+        LaunchedEffect(isFocused) {
+            if (isFocused) {
+                kotlinx.coroutines.delay(1500) // Wait 1.5s before loading preview
+                showPreview = true
+            } else {
+                showPreview = false
+            }
+        }
+
         Column {
             // Thumbnail (16:9)
             Box(
@@ -529,6 +596,14 @@ private fun VideoCard(video: WeddingVideo, onClick: () -> Unit, onFocus: () -> U
 
                 // Subtly darken the thumbnail
                 Box(modifier = Modifier.fillMaxSize().background(Color(0x33000000)))
+
+                // Video preview overlay on focus
+                if (showPreview && video.vimeoVideoId.isNotBlank()) {
+                    VimeoPreview(
+                        vimeoVideoId = video.vimeoVideoId,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
 
                 // Duration badge
                 if (video.duration.isNotBlank()) {

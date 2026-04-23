@@ -24,74 +24,61 @@ class AuthViewModel @Inject constructor(
     val currentUser: StateFlow<User?> = _currentUser.asStateFlow()
 
     init {
-        loadCurrentUser()
+        // Attempt to restore previous session silently on launch
+        if (authRepository.hasActiveSession()) {
+            restoreSession()
+        }
     }
 
-    fun signIn(email: String, password: String) {
-        if (email.isBlank() || password.isBlank()) {
-            _authState.value = UiState.Error("Email and password are required")
+    // ── Sign in with 4-char code ─────────────────────────────────────────────
+
+    fun signInWithCode(code: String) {
+        if (code.isBlank() || code.length < 4) {
+            _authState.value = UiState.Error("Please enter a valid 4-character code")
             return
         }
-
         viewModelScope.launch {
             _authState.value = UiState.Loading
-            val result = authRepository.signIn(email.trim(), password)
+            val result = authRepository.signInWithCode(code)
             _authState.value = result.fold(
-                onSuccess = {
-                    _currentUser.value = it
-                    UiState.Success(it)
+                onSuccess = { user ->
+                    _currentUser.value = user
+                    UiState.Success(user)
                 },
-                onFailure = {
-                    UiState.Error(it.message ?: "Unable to sign in")
-                }
+                onFailure = { UiState.Error(it.message ?: "Invalid code") }
             )
         }
     }
+
+    // ── Demo mode ─────────────────────────────────────────────────────────────
 
     fun signInAsDemoUser() {
+        signInWithCode("DEMO")
+    }
+
+    // ── Session restore ───────────────────────────────────────────────────────
+
+    fun restoreSession() {
         viewModelScope.launch {
             _authState.value = UiState.Loading
-            // Random email to ensure a fresh demo every time
-            val randomId = (1000..9999).random()
-            val demoEmail = "demo_$randomId@weddingstories.com"
-            val demoPassword = "password123"
-            
-            // 1. Create account
-            val demoVideoIds = listOf("demo_1", "demo_2", "demo_3")
-            val signupResult = authRepository.signUp(demoEmail, demoPassword, "Demo Guest", demoVideoIds)
-            
-            signupResult.fold(
+            val result = authRepository.restoreSession()
+            _authState.value = result.fold(
                 onSuccess = { user ->
-                    // 2. Populate sample data
-                    val dataResult = authRepository.populateDemoData(user.uid)
-                    dataResult.onSuccess {
-                        _currentUser.value = user
-                        _authState.value = UiState.Success(user)
-                    }.onFailure {
-                        _authState.value = UiState.Error("Account created but failed to load data: ${it.message}")
-                    }
+                    _currentUser.value = user
+                    UiState.Success(user)
                 },
                 onFailure = {
-                    _authState.value = UiState.Error("Failed to create demo account: ${it.message}")
+                    // Session expired or invalid — go back to login
+                    authRepository.clearSession()
+                    UiState.Idle
                 }
             )
         }
     }
 
-    fun loadCurrentUser() {
-        val firebaseUser = authRepository.getCurrentUser() ?: return
+    fun hasActiveSession(): Boolean = authRepository.hasActiveSession()
 
-        viewModelScope.launch {
-            val result = authRepository.getUserProfile(firebaseUser.uid)
-            result.onSuccess { user ->
-                _currentUser.value = user
-                _authState.value = UiState.Success(user)
-            }.onFailure {
-                // If profile not found, just clear session
-                signOut()
-            }
-        }
-    }
+    // ── Misc ──────────────────────────────────────────────────────────────────
 
     fun clearAuthError() {
         if (_authState.value is UiState.Error) {
@@ -99,12 +86,9 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-    fun hasActiveSession(): Boolean = authRepository.getCurrentUser() != null
-
     fun signOut() {
-        authRepository.signOut()
+        authRepository.clearSession()
         _currentUser.value = null
         _authState.value = UiState.Idle
     }
 }
-

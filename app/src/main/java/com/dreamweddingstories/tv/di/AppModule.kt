@@ -1,12 +1,15 @@
 package com.dreamweddingstories.tv.di
 
+import android.content.Context
+import android.content.SharedPreferences
 import com.dreamweddingstories.tv.network.VimeoApiService
 import com.dreamweddingstories.tv.network.RetrofitClient
-import com.google.firebase.auth.FirebaseAuth
+import com.dreamweddingstories.tv.utils.Constants
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
@@ -16,11 +19,14 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
+    fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
 
     @Provides
     @Singleton
-    fun provideFirebaseFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
+    fun provideSharedPreferences(
+        @ApplicationContext context: Context
+    ): SharedPreferences =
+        context.getSharedPreferences(Constants.SESSION_PREFS_NAME, Context.MODE_PRIVATE)
 
     @Provides
     @Singleton

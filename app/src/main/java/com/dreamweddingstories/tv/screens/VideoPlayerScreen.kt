@@ -4,6 +4,9 @@
 package com.dreamweddingstories.tv.screens
 
 import android.widget.FrameLayout
+import android.webkit.WebChromeClient
+import android.webkit.WebSettings
+import android.webkit.WebView
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -118,9 +121,15 @@ fun VideoPlayerScreen(
             val listener = object : Player.Listener {
                 override fun onIsPlayingChanged(playing: Boolean) {
                     isPlaying = playing
+                    android.util.Log.e("VideoPlayerScreen", "is playing: $playing")
                 }
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     isBuffering = playbackState == Player.STATE_BUFFERING
+                    android.util.Log.e("VideoPlayerScreen", "playback state: $playbackState")
+                }
+                override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                    android.util.Log.e("VideoPlayerScreen", "Player Error: ${error.message}", error)
+                    viewModel.clearError() // reset and maybe show error UI?
                 }
             }
             player.addListener(listener)
@@ -201,7 +210,7 @@ fun VideoPlayerScreen(
                 } else false
             }
     ) {
-        // ── Video Surface ──
+        // ── Video Surface or WebView Fallback ──
         if (streamUrl != null && exoPlayer != null) {
             AndroidView(
                 factory = {
@@ -214,6 +223,113 @@ fun VideoPlayerScreen(
                         player = exoPlayer
                     }
                 },
+                modifier = Modifier.fillMaxSize()
+            )
+        } else if (state.isFallbackWebView && state.webViewUrl != null) {
+            val webView = remember { mutableStateOf<WebView?>(null) }
+            
+            LaunchedEffect(state.webViewUrl) {
+                val url = state.webViewUrl ?: return@LaunchedEffect
+                android.util.Log.e("VimeoWebView", "LAUNCHED_EFFECT_LOADING: $url")
+                val extraHeaders = mutableMapOf<String, String>()
+                extraHeaders["Referer"] = "https://dreamweddingstories.com"
+                webView.value?.loadUrl(url, extraHeaders)
+            }
+
+            AndroidView(
+                factory = { ctx ->
+                    object : WebView(ctx) {
+                        override fun dispatchKeyEvent(event: android.view.KeyEvent): Boolean {
+                            if (event.action == android.view.KeyEvent.ACTION_DOWN) {
+                                when (event.keyCode) {
+                                    android.view.KeyEvent.KEYCODE_DPAD_CENTER,
+                                    android.view.KeyEvent.KEYCODE_ENTER,
+                                    android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
+                                        evaluateJavascript("""
+                                            (function(){var v=document.querySelector('video');
+                                            if(v){if(v.paused)v.play();else v.pause();}})();
+                                        """.trimIndent(), null)
+                                        return true
+                                    }
+                                    android.view.KeyEvent.KEYCODE_DPAD_LEFT,
+                                    android.view.KeyEvent.KEYCODE_MEDIA_REWIND -> {
+                                        evaluateJavascript("""
+                                            (function(){var v=document.querySelector('video');
+                                            if(v)v.currentTime=Math.max(0,v.currentTime-10);})();
+                                        """.trimIndent(), null)
+                                        return true
+                                    }
+                                    android.view.KeyEvent.KEYCODE_DPAD_RIGHT,
+                                    android.view.KeyEvent.KEYCODE_MEDIA_FAST_FORWARD -> {
+                                        evaluateJavascript("""
+                                            (function(){var v=document.querySelector('video');
+                                            if(v)v.currentTime=Math.min(v.duration,v.currentTime+10);})();
+                                        """.trimIndent(), null)
+                                        return true
+                                    }
+                                    android.view.KeyEvent.KEYCODE_MEDIA_PLAY -> {
+                                        evaluateJavascript("document.querySelector('video')?.play();", null)
+                                        return true
+                                    }
+                                    android.view.KeyEvent.KEYCODE_MEDIA_PAUSE -> {
+                                        evaluateJavascript("document.querySelector('video')?.pause();", null)
+                                        return true
+                                    }
+                                    android.view.KeyEvent.KEYCODE_BACK -> {
+                                        return super.dispatchKeyEvent(event)
+                                    }
+                                }
+                            }
+                            return super.dispatchKeyEvent(event)
+                        }
+                    }.apply {
+                        webView.value = this
+                        layoutParams = FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.MATCH_PARENT,
+                            FrameLayout.LayoutParams.MATCH_PARENT
+                        )
+                        setBackgroundColor(android.graphics.Color.BLACK)
+                        settings.javaScriptEnabled = true
+                        settings.domStorageEnabled = true
+                        settings.databaseEnabled = true
+                        settings.mediaPlaybackRequiresUserGesture = false
+                        settings.loadWithOverviewMode = true
+                        settings.useWideViewPort = true
+                        settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                        settings.cacheMode = WebSettings.LOAD_DEFAULT
+                        settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+                        
+                        webViewClient = object : android.webkit.WebViewClient() {
+                            override fun onPageFinished(view: WebView?, url: String?) {
+                                android.util.Log.e("VimeoWebView", "PAGE_FINISHED: $url")
+                                view?.evaluateJavascript("""
+                                    (function(){
+                                        var s=document.createElement('style');
+                                        s.textContent='video{object-fit:contain!important;width:100%!important;height:100%!important}';
+                                        document.head.appendChild(s);
+                                    })();
+                                """.trimIndent(), null)
+                            }
+                            override fun onReceivedSslError(view: WebView?, handler: android.webkit.SslErrorHandler?, error: android.net.http.SslError?) {
+                                handler?.proceed()
+                            }
+                            override fun onReceivedError(view: WebView?, request: android.webkit.WebResourceRequest?, error: android.webkit.WebResourceError?) {
+                                android.util.Log.e("VimeoWebView", "ERROR: ${error?.errorCode} ${error?.description} for ${request?.url}")
+                            }
+                        }
+                        webChromeClient = object : WebChromeClient() {
+                            override fun onConsoleMessage(consoleMessage: android.webkit.ConsoleMessage?): Boolean {
+                                android.util.Log.e("VimeoWebView", "JS_CONSOLE: ${consoleMessage?.message()}")
+                                return true
+                            }
+                        }
+                        
+                        isFocusable = true
+                        isFocusableInTouchMode = true
+                        requestFocus()
+                    }
+                },
+                update = { },
                 modifier = Modifier.fillMaxSize()
             )
         }
@@ -279,7 +395,7 @@ fun VideoPlayerScreen(
 
         // ── Custom Playback Controls ──
         AnimatedVisibility(
-            visible = controlsVisible && state.error.isNullOrBlank(),
+            visible = controlsVisible && state.error.isNullOrBlank() && !state.isFallbackWebView,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.BottomCenter)
@@ -408,7 +524,7 @@ fun VideoPlayerScreen(
 
         // ── Title overlay at top when controls visible ──
         AnimatedVisibility(
-            visible = controlsVisible && state.error.isNullOrBlank(),
+            visible = controlsVisible && state.error.isNullOrBlank() && !state.isFallbackWebView,
             enter = fadeIn(),
             exit = fadeOut(),
             modifier = Modifier.align(Alignment.TopCenter)

@@ -38,7 +38,7 @@ private sealed class AppRoute(val route: String) {
     }
     data object VideoPlayer : AppRoute("videoPlayer/{videoId}/{vimeoVideoId}/{title}") {
         fun create(videoId: String, vimeoVideoId: String, title: String): String {
-            return "videoPlayer/$videoId/$vimeoVideoId/${Uri.encode(title)}"
+            return "videoPlayer/${Uri.encode(videoId)}/${Uri.encode(vimeoVideoId)}/${Uri.encode(title)}"
         }
     }
 }
@@ -123,7 +123,7 @@ fun AppNavigation(
         ) {
             LoginScreen(
                 authState = authState,
-                onEmailPasswordSignIn = authViewModel::signIn,
+                onCodeSignIn = authViewModel::signInWithCode,
                 onDemoSignIn = authViewModel::signInAsDemoUser,
                 onDismissError = authViewModel::clearAuthError,
                 onLoginSuccess = {
