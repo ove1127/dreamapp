@@ -3,7 +3,8 @@
 package com.dreamweddingstories.tv.screens
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -17,12 +18,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -33,7 +31,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -46,21 +45,39 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import coil.compose.AsyncImage
+import androidx.compose.ui.layout.ContentScale
+import com.dreamweddingstories.tv.components.PrimaryButton
+import com.dreamweddingstories.tv.components.SecondaryButton
+import com.dreamweddingstories.tv.components.GoldShimmerLine
 import com.dreamweddingstories.tv.model.UiState
 import com.dreamweddingstories.tv.model.User
-import com.dreamweddingstories.tv.ui.theme.AccentWhite
+import com.dreamweddingstories.tv.ui.theme.AccentGold
+import com.dreamweddingstories.tv.ui.theme.AccentGoldSubtle
 import com.dreamweddingstories.tv.ui.theme.DarkBackground
-import com.dreamweddingstories.tv.ui.theme.DividerWhite
-import com.dreamweddingstories.tv.ui.theme.ErrorRed
+import com.dreamweddingstories.tv.ui.theme.DreamAnimation
+import com.dreamweddingstories.tv.ui.theme.DreamShapes
+import com.dreamweddingstories.tv.ui.theme.ErrorAmber
+import com.dreamweddingstories.tv.ui.theme.GoldDivider
+import com.dreamweddingstories.tv.ui.theme.SurfaceDark
 import com.dreamweddingstories.tv.ui.theme.TextPrimary
 import com.dreamweddingstories.tv.ui.theme.TextSecondary
+import com.dreamweddingstories.tv.ui.theme.TextTertiary
+import com.dreamweddingstories.tv.ui.theme.WarmBorder
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private const val CODE_LENGTH = 4
 
+/**
+ * Login Screen — Cinematic Luxury Editorial
+ *
+ * Full-bleed dark bokeh background. Centre frosted-glass card.
+ * 4-character code entry with gold bottom-border animation.
+ * Sharp-cornered gold CTA. Warm amber error states.
+ */
 @Composable
 fun LoginScreen(
     authState: UiState<User>,
@@ -69,11 +86,15 @@ fun LoginScreen(
     onDismissError: () -> Unit,
     onLoginSuccess: () -> Unit
 ) {
-    // One state string for the full code
     var code by remember { mutableStateOf("") }
-
-    // 4 individual FocusRequesters — one per box
     val focusRequesters = remember { List(CODE_LENGTH) { FocusRequester() } }
+
+    // ── Entrance animation ──
+    val contentAlpha = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        delay(200)
+        contentAlpha.animateTo(1f, DreamAnimation.silkTween(DreamAnimation.SLOW))
+    }
 
     // Navigate on success
     LaunchedEffect(authState) {
@@ -82,17 +103,52 @@ fun LoginScreen(
 
     // Auto-focus first box
     LaunchedEffect(Unit) {
+        delay(600)
         focusRequesters[0].requestFocus()
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF000000))
+            .background(DarkBackground)
     ) {
-        Row(modifier = Modifier.fillMaxSize()) {
+        // ── Abstract bokeh background (CSS/canvas-generated) ──
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            Color(0xFF1A1E3A).copy(alpha = 0.4f),
+                            Color(0xFF0F1623).copy(alpha = 0.6f),
+                            DarkBackground
+                        ),
+                        radius = 900f
+                    )
+                )
+        )
+        // Gold-tinted bokeh circles (simulated)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.radialGradient(
+                        colors = listOf(
+                            AccentGold.copy(alpha = 0.03f),
+                            Color.Transparent
+                        ),
+                        radius = 600f,
+                        center = androidx.compose.ui.geometry.Offset(300f, 200f)
+                    )
+                )
+        )
 
-            // ── Left: Branding ────────────────────────────────────────────────
+        Row(
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(contentAlpha.value)
+        ) {
+            // ── Left: Branding ──
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -104,64 +160,77 @@ fun LoginScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.padding(64.dp)
                 ) {
-                    Text(
-                        text = "✦",
-                        fontSize = 36.sp,
-                        color = AccentWhite.copy(alpha = 0.6f)
+                    // Company Logo
+                    AsyncImage(
+                        model = "https://res.cloudinary.com/doy1jic8d/image/upload/v1774727598/dream-wedding-assets/umnjmt9ucxwled1c3rq4.png",
+                        contentDescription = "Dream Wedding Stories",
+                        modifier = Modifier.height(120.dp),
+                        contentScale = ContentScale.Fit
                     )
-                    Text(
-                        text = "Dream Wedding\nStories",
-                        style = MaterialTheme.typography.displaySmall,
-                        fontWeight = FontWeight.Bold,
-                        color = AccentWhite,
-                        textAlign = TextAlign.Center,
-                        lineHeight = 52.sp
-                    )
+
                     Spacer(modifier = Modifier.height(8.dp))
+
+                    // Gold rule
+                    Box(
+                        modifier = Modifier
+                            .width(80.dp)
+                            .height(1.dp)
+                            .background(GoldDivider)
+                    )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+
                     Text(
-                        text = "Your cinematic memories,\nalways with you.",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = TextSecondary,
+                        text = "YOUR LOVE STORY\nBEAUTIFULLY PRESERVED",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = TextTertiary,
                         textAlign = TextAlign.Center,
-                        lineHeight = 26.sp
+                        lineHeight = 22.sp
                     )
                 }
             }
 
-            // ── Right: Code Entry ─────────────────────────────────────────────
+            // ── Right: Code Entry (frosted glass card) ──
             Box(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxHeight()
-                    .background(Color(0xFF0F0F0F)),
+                    .background(SurfaceDark.copy(alpha = 0.7f))
+                    .border(
+                        width = 1.dp,
+                        color = WarmBorder,
+                        shape = DreamShapes.Sharp
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(32.dp),
+                    verticalArrangement = Arrangement.spacedBy(28.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     modifier = Modifier.width(420.dp)
                 ) {
-                    // Heading
+                    // ── Heading ──
                     Column(
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
                         horizontalAlignment = Alignment.Start,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
                             text = "Enter Your Code",
                             style = MaterialTheme.typography.headlineLarge,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
+                            fontWeight = FontWeight.Light,
+                            color = TextPrimary,
+                            letterSpacing = 2.sp
                         )
                         Text(
-                            text = "Use the 4-character code shared with you by your photographer.",
+                            text = "Use the 4-character code shared with you\nby your filmmaker.",
                             style = MaterialTheme.typography.bodyMedium,
                             color = TextSecondary,
-                            lineHeight = 22.sp
+                            lineHeight = 24.sp,
+                            fontWeight = FontWeight.Light
                         )
                     }
 
-                    // ── 4-Box OTP input ──────────────────────────────────────
+                    // ── 4-Box code input with gold bottom borders ──
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier.fillMaxWidth()
@@ -172,12 +241,12 @@ fun LoginScreen(
 
                             val borderColor by animateColorAsState(
                                 targetValue = when {
-                                    authState is UiState.Error -> ErrorRed
-                                    isFocused.value -> AccentWhite
-                                    char.isNotEmpty() -> AccentWhite.copy(alpha = 0.6f)
-                                    else -> DividerWhite
+                                    authState is UiState.Error -> ErrorAmber
+                                    isFocused.value -> AccentGold
+                                    char.isNotEmpty() -> AccentGold.copy(alpha = 0.5f)
+                                    else -> TextTertiary.copy(alpha = 0.4f)
                                 },
-                                animationSpec = tween(200),
+                                animationSpec = DreamAnimation.silkTween(),
                                 label = "border_$index"
                             )
 
@@ -185,7 +254,6 @@ fun LoginScreen(
                                 value = char,
                                 onValueChange = { newVal ->
                                     onDismissError()
-                                    // Only accept alphanumeric
                                     val filtered = newVal.filter { it.isLetterOrDigit() }
                                         .uppercase()
                                         .take(1)
@@ -194,12 +262,10 @@ fun LoginScreen(
                                     if (filtered.isNotEmpty()) {
                                         codeChars[index] = filtered[0]
                                         code = codeChars.joinToString("").trimEnd()
-                                        // Advance focus
                                         if (index < CODE_LENGTH - 1) {
                                             focusRequesters[index + 1].requestFocus()
                                         }
                                     } else if (filtered.isEmpty() && char.isNotEmpty()) {
-                                        // Backspace — clear this box and move back
                                         codeChars[index] = ' '
                                         code = codeChars.joinToString("").trimEnd()
                                         if (index > 0) focusRequesters[index - 1].requestFocus()
@@ -209,7 +275,7 @@ fun LoginScreen(
                                 textStyle = androidx.compose.ui.text.TextStyle(
                                     color = TextPrimary,
                                     fontSize = 28.sp,
-                                    fontWeight = FontWeight.Bold,
+                                    fontWeight = FontWeight.Light,
                                     textAlign = TextAlign.Center,
                                     letterSpacing = 0.sp
                                 ),
@@ -230,86 +296,62 @@ fun LoginScreen(
                                 colors = OutlinedTextFieldDefaults.colors(
                                     focusedTextColor = TextPrimary,
                                     unfocusedTextColor = TextPrimary,
-                                    cursorColor = AccentWhite,
-                                    focusedBorderColor = borderColor,
-                                    unfocusedBorderColor = borderColor,
+                                    cursorColor = AccentGold,
+                                    focusedBorderColor = Color.Transparent,
+                                    unfocusedBorderColor = Color.Transparent,
+                                    focusedContainerColor = SurfaceDark.copy(alpha = 0.5f),
+                                    unfocusedContainerColor = SurfaceDark.copy(alpha = 0.3f)
                                 ),
-                                shape = RoundedCornerShape(8.dp),
+                                shape = DreamShapes.Sharp,
                                 modifier = Modifier
                                     .weight(1f)
                                     .height(80.dp)
                                     .focusRequester(focusRequesters[index])
                                     .onFocusChanged { isFocused.value = it.isFocused }
+                                    // Gold bottom border only
+                                    .border(
+                                        width = 1.dp,
+                                        brush = Brush.verticalGradient(
+                                            colors = listOf(Color.Transparent, Color.Transparent, borderColor),
+                                            startY = 0f,
+                                            endY = Float.MAX_VALUE
+                                        ),
+                                        shape = DreamShapes.Sharp
+                                    )
                             )
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    // ── Loading shimmer ──
+                    if (authState is UiState.Loading) {
+                        GoldShimmerLine(modifier = Modifier.fillMaxWidth())
+                    }
 
-                    // ── Submit button ────────────────────────────────────────
-                    Button(
+                    Spacer(modifier = Modifier.height(4.dp))
+
+                    // ── Submit button — gold, sharp corners ──
+                    PrimaryButton(
+                        text = if (authState is UiState.Loading) "Verifying..." else "View My Wedding",
                         onClick = { onCodeSignIn(code) },
                         enabled = authState !is UiState.Loading && code.length == CODE_LENGTH,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        shape = ButtonDefaults.shape(shape = RoundedCornerShape(4.dp)),
-                        colors = ButtonDefaults.colors(
-                            containerColor = AccentWhite,
-                            contentColor = DarkBackground,
-                            focusedContainerColor = AccentWhite.copy(alpha = 0.85f),
-                            focusedContentColor = DarkBackground,
-                            disabledContainerColor = AccentWhite.copy(alpha = 0.3f),
-                            disabledContentColor = DarkBackground.copy(alpha = 0.5f)
-                        )
-                    ) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            if (authState is UiState.Loading) {
-                                CircularProgressIndicator(
-                                    color = DarkBackground,
-                                    modifier = Modifier.size(24.dp),
-                                    strokeWidth = 2.dp
-                                )
-                            } else {
-                                Text(
-                                    text = "View My Wedding",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
+                        modifier = Modifier.fillMaxWidth()
+                    )
 
-                    // ── Demo button ──────────────────────────────────────────
-                    Button(
+                    // ── Demo button — outlined ──
+                    SecondaryButton(
+                        text = "Try Demo",
                         onClick = onDemoSignIn,
                         enabled = authState !is UiState.Loading,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        shape = ButtonDefaults.shape(shape = RoundedCornerShape(4.dp)),
-                        colors = ButtonDefaults.colors(
-                            containerColor = Color.Transparent,
-                            contentColor = AccentWhite,
-                            focusedContainerColor = AccentWhite.copy(alpha = 0.15f),
-                            focusedContentColor = AccentWhite
-                        )
-                    ) {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Text(
-                                text = "Try Demo",
-                                style = MaterialTheme.typography.titleSmall,
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                    }
+                        modifier = Modifier.fillMaxWidth(),
+                        height = 48.dp
+                    )
 
-                    // ── Error message ─────────────────────────────────────────
+                    // ── Error message — warm amber ──
                     if (authState is UiState.Error) {
                         Text(
                             text = authState.message,
-                            color = ErrorRed,
-                            style = MaterialTheme.typography.bodyMedium,
+                            color = ErrorAmber,
+                            style = MaterialTheme.typography.bodySmall,
                             textAlign = TextAlign.Center,
                             modifier = Modifier.fillMaxWidth()
                         )

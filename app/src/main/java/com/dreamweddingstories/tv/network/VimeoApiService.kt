@@ -9,6 +9,8 @@ interface VimeoApiService {
     @GET("videos/{video_id}")
     suspend fun getVideoDetails(
         @Path("video_id") videoId: String,
-        @Query("h") hash: String? = null
+        @Query("h") hash: String? = null,
+        // Vimeo Pro: must explicitly request `play` or it is omitted from the response
+        @Query("fields") fields: String = "play,name,description,duration,pictures"
     ): VimeoVideoResponse
 }

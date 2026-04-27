@@ -33,51 +33,30 @@ class PlayerViewModel @Inject constructor(
 
     fun loadStream(videoId: String, vimeoVideoId: String, title: String) {
         // Guard: don't reload if already loaded for this video
-        if (_playerState.value.videoId == videoId && 
+        if (_playerState.value.videoId == videoId &&
             (_playerState.value.streamUrl != null || _playerState.value.isFallbackWebView)) return
 
         viewModelScope.launch {
             _playerState.value = PlayerStreamState(isLoading = true, title = title, videoId = videoId)
-            
-            // Try Vimeo API first for native ExoPlayer streaming
-            val result = vimeoRepository.getPlayableUrl(vimeoVideoId)
-            android.util.Log.e("PlayerViewModel", "API Result: success=${result.isSuccess}")
-            
-            _playerState.value = result.fold(
-                onSuccess = { url ->
-                    android.util.Log.e("PlayerViewModel", "Got stream URL: $url")
-                    PlayerStreamState(
-                        isLoading = false,
-                        streamUrl = url,
-                        error = null,
-                        title = title,
-                        videoId = videoId,
-                        vimeoVideoId = vimeoVideoId,
-                        isFallbackWebView = false
-                    )
-                },
-                onFailure = { err ->
-                    android.util.Log.e("PlayerViewModel", "API failed: ${err.message}", err)
-                    if (err is kotlinx.coroutines.CancellationException) throw err
-                    
-                    // Fall back to WebView embed
-                    val parts = vimeoVideoId.split("?h=")
-                    val vidId = parts[0]
-                    val hashParam = if (parts.size > 1) "?h=${parts[1]}&" else "?"
-                    val embedUrl = "https://player.vimeo.com/video/$vidId${hashParam}badge=0&autopause=0&autoplay=1&player_id=0&app_id=58479"
-                    android.util.Log.e("PlayerViewModel", "Falling back to WebView: $embedUrl")
-                    
-                    PlayerStreamState(
-                        isLoading = false,
-                        streamUrl = null,
-                        error = null,
-                        title = title,
-                        videoId = videoId,
-                        vimeoVideoId = vimeoVideoId,
-                        isFallbackWebView = true,
-                        webViewUrl = embedUrl
-                    )
-                }
+
+            // Vimeo embed-only videos: load the Vimeo player URL directly in a WebView
+            // with a Referer header pointing to our registered domain. This is a real
+            // browser navigation (no ORB blocking) and Vimeo accepts it.
+            val parts = vimeoVideoId.split("?h=")
+            val vidId = parts[0]
+            val hashParam = if (parts.size > 1) "&h=${parts[1]}" else ""
+            val playerUrl = "https://player.vimeo.com/video/$vidId?badge=0&autopause=0&autoplay=1&player_id=0&app_id=58479$hashParam"
+            android.util.Log.d("PlayerViewModel", "Loading Vimeo player for: $vidId")
+
+            _playerState.value = PlayerStreamState(
+                isLoading = false,
+                streamUrl = null,
+                error = null,
+                title = title,
+                videoId = videoId,
+                vimeoVideoId = vimeoVideoId,
+                isFallbackWebView = true,
+                webViewUrl = playerUrl
             )
         }
     }

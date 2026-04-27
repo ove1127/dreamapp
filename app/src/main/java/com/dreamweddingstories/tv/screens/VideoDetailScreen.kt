@@ -19,12 +19,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
@@ -41,20 +38,28 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
+import androidx.compose.ui.unit.sp
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil.compose.AsyncImage
+import com.dreamweddingstories.tv.components.PrimaryButton
+import com.dreamweddingstories.tv.components.SecondaryButton
+import com.dreamweddingstories.tv.components.GoldShimmerLine
 import com.dreamweddingstories.tv.model.UiState
 import com.dreamweddingstories.tv.model.WeddingVideo
+import com.dreamweddingstories.tv.ui.theme.AccentGold
 import com.dreamweddingstories.tv.ui.theme.CardBackground
 import com.dreamweddingstories.tv.ui.theme.DarkBackground
+import com.dreamweddingstories.tv.ui.theme.DreamAnimation
+import com.dreamweddingstories.tv.ui.theme.DreamShapes
+import com.dreamweddingstories.tv.ui.theme.ErrorAmber
+import com.dreamweddingstories.tv.ui.theme.GoldDivider
 import com.dreamweddingstories.tv.ui.theme.SurfaceDark
-import com.dreamweddingstories.tv.ui.theme.ErrorRed
-import com.dreamweddingstories.tv.ui.theme.AccentWhite
+import com.dreamweddingstories.tv.ui.theme.SurfaceDim
 import com.dreamweddingstories.tv.ui.theme.TextPrimary
 import com.dreamweddingstories.tv.ui.theme.TextSecondary
+import com.dreamweddingstories.tv.ui.theme.TextTertiary
+import com.dreamweddingstories.tv.ui.theme.WarmBorder
 
 @Composable
 fun VideoDetailScreen(
@@ -68,7 +73,6 @@ fun VideoDetailScreen(
     val playFocusRequester = remember { FocusRequester() }
     val contentVisible = remember { mutableStateOf(false) }
 
-    // Trigger entrance animation
     LaunchedEffect(state) {
         if (state is UiState.Success) {
             contentVisible.value = true
@@ -78,49 +82,53 @@ fun VideoDetailScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(listOf(SurfaceDark, DarkBackground))
-            )
+            .background(DarkBackground)
     ) {
         when (state) {
             UiState.Loading -> {
-                Column(
-                    modifier = Modifier.align(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                // Gold shimmer loading
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = AccentWhite, strokeWidth = 3.dp)
-                    Text(
-                        text = "Loading details...",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = TextSecondary
-                    )
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(24.dp)
+                    ) {
+                        GoldShimmerLine(modifier = Modifier.width(300.dp))
+                        Text(
+                            text = "LOADING DETAILS",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = TextTertiary
+                        )
+                    }
                 }
             }
 
             is UiState.Error -> {
-                Column(
-                    modifier = Modifier.align(Alignment.Center),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Text(text = state.message, color = ErrorRed, style = MaterialTheme.typography.bodyLarge)
-                    Button(
-                        onClick = onRetry,
-                        colors = ButtonDefaults.colors(containerColor = AccentWhite, contentColor = DarkBackground)
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Text("Retry", fontWeight = FontWeight.Bold)
-                    }
-                    Button(
-                        onClick = onBack,
-                        colors = ButtonDefaults.colors(
-                            containerColor = Color.Transparent,
-                            contentColor = TextSecondary,
-                            focusedContainerColor = AccentWhite.copy(alpha = 0.15f),
-                            focusedContentColor = AccentWhite
+                        Text(
+                            text = state.message,
+                            color = ErrorAmber,
+                            style = MaterialTheme.typography.bodyLarge
                         )
-                    ) {
-                        Text("Back")
+                        PrimaryButton(
+                            text = "Retry",
+                            onClick = onRetry,
+                            modifier = Modifier.width(180.dp)
+                        )
+                        SecondaryButton(
+                            text = "Go Back",
+                            onClick = onBack,
+                            modifier = Modifier.width(180.dp)
+                        )
                     }
                 }
             }
@@ -128,70 +136,127 @@ fun VideoDetailScreen(
             is UiState.Success -> {
                 val video = state.data
 
-                // ── Blurred background thumbnail ──
+                // ── Blurred background (40px blur, 85% darkened) ──
                 AsyncImage(
                     model = video.thumbnailUrl,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .matchParentSize()
-                        .blur(20.dp)
+                        .blur(40.dp)
                 )
-
-                // Multi-layer overlay for depth
                 Box(
                     modifier = Modifier
                         .matchParentSize()
-                        .background(Color(0xBB0D0D0D))
+                        .background(SurfaceDim)
                 )
+                // Warm horizontal gradient
                 Box(
                     modifier = Modifier
                         .matchParentSize()
                         .background(
                             Brush.horizontalGradient(
-                                listOf(Color(0xCC1A1A2E), Color.Transparent)
+                                listOf(
+                                    DarkBackground.copy(alpha = 0.5f),
+                                    Color.Transparent
+                                )
                             )
                         )
                 )
 
-                // ── Content ──
+                // ── Content — two-column editorial layout ──
                 AnimatedVisibility(
                     visible = contentVisible.value,
-                    enter = fadeIn(tween(500)) + slideInVertically(
-                        initialOffsetY = { it / 8 },
-                        animationSpec = tween(600)
-                    )
+                    enter = fadeIn(DreamAnimation.silkTween(DreamAnimation.SLOW)) +
+                            slideInVertically(
+                                initialOffsetY = { it / 12 },
+                                animationSpec = DreamAnimation.silkTween(DreamAnimation.SLOW)
+                            )
                 ) {
-                    Box(
+                    Row(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(start = 80.dp, bottom = 64.dp, top = 64.dp, end = 80.dp)
+                            .padding(horizontal = 80.dp, vertical = 64.dp),
+                        horizontalArrangement = Arrangement.spacedBy(60.dp)
                     ) {
-                        // ── Info panel on the Left ──
+                        // ── Left column (45%): Film poster ──
                         Column(
                             modifier = Modifier
+                                .weight(0.45f)
+                                .fillMaxHeight(),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            // Poster with gold frame
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .border(1.dp, GoldDivider, DreamShapes.Sharp)
+                                    .padding(1.dp)
+                            ) {
+                                AsyncImage(
+                                    model = video.thumbnailUrl,
+                                    contentDescription = video.coupleNames,
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(DreamShapes.Sharp)
+                                )
+                            }
+
+                            Spacer(modifier = Modifier.height(20.dp))
+
+                            // Metadata below poster
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                if (video.duration.isNotBlank()) {
+                                    MetadataLabel(label = "RUNTIME", value = video.duration)
+                                }
+                                if (video.weddingDate.isNotBlank()) {
+                                    MetadataLabel(label = "DATE", value = video.weddingDate)
+                                }
+                            }
+                        }
+
+                        // ── Right column (55%): Details ──
+                        Column(
+                            modifier = Modifier
+                                .weight(0.55f)
                                 .fillMaxHeight()
-                                .fillMaxWidth(0.5f)
                                 .verticalScroll(rememberScrollState()),
                             verticalArrangement = Arrangement.Center
                         ) {
-                            // Couple name
+                            // Section tag
                             Text(
-                                text = video.coupleNames,
-                                style = MaterialTheme.typography.displayMedium,
-                                color = TextPrimary,
-                                fontWeight = FontWeight.Bold,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis
+                                text = "WEDDING FILM",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = AccentGold,
+                                fontWeight = FontWeight.Medium
                             )
 
                             Spacer(modifier = Modifier.height(16.dp))
 
-                            // ── Metadata chips ──
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                MetadataChip(label = "Date", value = video.weddingDate)
-                                MetadataChip(label = "Duration", value = video.duration)
-                            }
+                            // Couple names — Cormorant, 52sp, thin
+                            Text(
+                                text = video.coupleNames,
+                                style = MaterialTheme.typography.displayMedium,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Light,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+
+                            Spacer(modifier = Modifier.height(20.dp))
+
+                            // Gold rule
+                            Box(
+                                modifier = Modifier
+                                    .width(160.dp)
+                                    .height(1.dp)
+                                    .background(GoldDivider)
+                            )
 
                             Spacer(modifier = Modifier.height(24.dp))
 
@@ -199,82 +264,39 @@ fun VideoDetailScreen(
                             if (video.description.isNotBlank()) {
                                 Text(
                                     text = video.description,
-                                    style = MaterialTheme.typography.headlineSmall,
+                                    style = MaterialTheme.typography.bodyLarge,
                                     color = TextSecondary,
-                                    lineHeight = MaterialTheme.typography.headlineSmall.lineHeight
+                                    fontWeight = FontWeight.Light,
+                                    lineHeight = 28.sp
                                 )
                             }
-                            
-                            Spacer(modifier = Modifier.height(64.dp))
 
-                            // Auto-focus play button after animation completes
+                            Spacer(modifier = Modifier.height(48.dp))
+
+                            // Auto-focus play button
                             LaunchedEffect(Unit) {
                                 kotlinx.coroutines.delay(700)
-                                try {
-                                    playFocusRequester.requestFocus()
-                                } catch (_: Exception) { }
+                                try { playFocusRequester.requestFocus() } catch (_: Exception) { }
                             }
 
-                            // ── Action buttons ──
-                            Row(horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                                Button(
+                            // ── Action buttons — sharp corners ──
+                            Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                                PrimaryButton(
+                                    text = "▶  Watch Now",
                                     onClick = { onPlay(video) },
                                     modifier = Modifier
-                                        .height(64.dp)
-                                        .focusRequester(playFocusRequester),
-                                    colors = ButtonDefaults.colors(
-                                        containerColor = AccentWhite,
-                                        contentColor = DarkBackground,
-                                        focusedContainerColor = AccentWhite,
-                                        focusedContentColor = DarkBackground
-                                    ),
-                                    shape = ButtonDefaults.shape(shape = RoundedCornerShape(4.dp)),
-                                    border = ButtonDefaults.border(
-                                        focusedBorder = androidx.tv.material3.Border(
-                                            border = androidx.compose.foundation.BorderStroke(2.dp, AccentWhite),
-                                            shape = RoundedCornerShape(4.dp)
-                                        )
-                                    ),
-                                    glow = ButtonDefaults.glow(
-                                        focusedGlow = androidx.tv.material3.Glow(
-                                            elevationColor = AccentWhite.copy(alpha = 0.5f),
-                                            elevation = 20.dp
-                                        )
-                                    )
-                                ) {
-                                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxHeight()) {
-                                        Text(
-                                            text = "▶  WATCH NOW",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
+                                        .height(60.dp)
+                                        .width(220.dp)
+                                        .focusRequester(playFocusRequester)
+                                )
 
-                                Button(
+                                SecondaryButton(
+                                    text = "←  Go Back",
                                     onClick = onBack,
-                                    modifier = Modifier.height(64.dp),
-                                    colors = ButtonDefaults.colors(
-                                        containerColor = Color.Transparent,
-                                        contentColor = TextPrimary,
-                                        focusedContainerColor = TextPrimary.copy(alpha = 0.2f),
-                                        focusedContentColor = TextPrimary
-                                    ),
-                                    shape = ButtonDefaults.shape(shape = RoundedCornerShape(4.dp)),
-                                    border = ButtonDefaults.border(
-                                        focusedBorder = androidx.tv.material3.Border(
-                                            border = androidx.compose.foundation.BorderStroke(1.dp, TextPrimary.copy(alpha=0.5f)),
-                                            shape = RoundedCornerShape(4.dp)
-                                        )
-                                    )
-                                ) {
-                                    Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxHeight()) {
-                                        Text(
-                                            text = "←  GO BACK",
-                                            style = MaterialTheme.typography.titleMedium
-                                        )
-                                    }
-                                }
+                                    modifier = Modifier
+                                        .height(60.dp)
+                                        .width(180.dp)
+                                )
                             }
                         }
                     }
@@ -287,31 +309,22 @@ fun VideoDetailScreen(
 }
 
 /* ──────────────────────────────────────────────────────────────
-   Metadata Chip — styled label + value
+   Metadata Label — Inter Light caps, gold accent
    ────────────────────────────────────────────────────────────── */
 @Composable
-private fun MetadataChip(label: String, value: String) {
-    if (value.isBlank()) return
-
-    Row(
-        modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(CardBackground.copy(alpha = 0.8f))
-            .border(1.dp, AccentWhite.copy(alpha = 0.2f), RoundedCornerShape(10.dp))
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
+private fun MetadataLabel(label: String, value: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(
             text = label,
-            style = MaterialTheme.typography.labelMedium,
-            color = AccentWhite
+            style = MaterialTheme.typography.labelSmall,
+            color = AccentGold.copy(alpha = 0.6f),
+            fontWeight = FontWeight.Medium
         )
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium,
             color = TextPrimary,
-            fontWeight = FontWeight.Medium
+            fontWeight = FontWeight.Light
         )
     }
 }

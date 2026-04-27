@@ -11,133 +11,157 @@ import androidx.compose.ui.unit.sp
 import androidx.tv.material3.Typography
 import com.dreamweddingstories.tv.R
 
+// ═══════════════════════════════════════════════════════
+// NETFLIX AESTHETIC — Typography
+// ═══════════════════════════════════════════════════════
+
 val provider = GoogleFont.Provider(
     providerAuthority = "com.google.android.gms.fonts",
     providerPackage = "com.google.android.gms",
     certificates = R.array.com_google_android_gms_fonts_certs
 )
 
-val PlayfairDisplayFont = FontFamily(
-    Font(googleFont = GoogleFont("Playfair Display"), fontProvider = provider)
+// ── Display / Hero — Inter (Replaced Cormorant Garamond) ──
+val CormorantGaramondFont = FontFamily(
+    Font(googleFont = GoogleFont("Inter"), fontProvider = provider, weight = FontWeight.Light),
+    Font(googleFont = GoogleFont("Inter"), fontProvider = provider, weight = FontWeight.Normal),
+    Font(googleFont = GoogleFont("Inter"), fontProvider = provider, weight = FontWeight.Medium),
+    Font(googleFont = GoogleFont("Inter"), fontProvider = provider, weight = FontWeight.SemiBold),
+    Font(googleFont = GoogleFont("Inter"), fontProvider = provider, weight = FontWeight.Bold),
+    Font(googleFont = GoogleFont("Inter"), fontProvider = provider, weight = FontWeight.ExtraBold)
 )
 
-val LatoFont = FontFamily(
-    Font(googleFont = GoogleFont("Lato"), fontProvider = provider)
+// ── Body / UI — Inter ──
+// Clean, modern, highly readable at small sizes. All-caps for labels.
+val InterFont = FontFamily(
+    Font(googleFont = GoogleFont("Inter"), fontProvider = provider, weight = FontWeight.Light),
+    Font(googleFont = GoogleFont("Inter"), fontProvider = provider, weight = FontWeight.Normal),
+    Font(googleFont = GoogleFont("Inter"), fontProvider = provider, weight = FontWeight.Medium),
+    Font(googleFont = GoogleFont("Inter"), fontProvider = provider, weight = FontWeight.SemiBold),
+    Font(googleFont = GoogleFont("Inter"), fontProvider = provider, weight = FontWeight.Bold),
 )
+
+// ── Legacy aliases ──
+@Deprecated("Use CormorantGaramondFont", replaceWith = ReplaceWith("CormorantGaramondFont"))
+val PlayfairDisplayFont = CormorantGaramondFont
+@Deprecated("Use InterFont", replaceWith = ReplaceWith("InterFont"))
+val LatoFont = InterFont
 
 val Typography = Typography(
-    // ── Display — Playfair Display (serif) ──
+
+    // ── Display — Inter, Bold/ExtraBold ──
+    // Hero couple names, splash title. Tighter letter-spacing.
     displayLarge = TextStyle(
-        fontFamily = PlayfairDisplayFont,
-        fontWeight = FontWeight.Bold,
-        fontSize = 57.sp,
-        lineHeight = 64.sp,
-        letterSpacing = (-0.25).sp
+        fontFamily = InterFont,
+        fontWeight = FontWeight.ExtraBold,
+        fontSize = 72.sp,
+        lineHeight = 80.sp,
+        letterSpacing = (-1).sp   // Tighter for impact
     ),
     displayMedium = TextStyle(
-        fontFamily = PlayfairDisplayFont,
+        fontFamily = InterFont,
         fontWeight = FontWeight.Bold,
-        fontSize = 45.sp,
-        lineHeight = 52.sp,
-        letterSpacing = 0.sp
+        fontSize = 52.sp,
+        lineHeight = 60.sp,
+        letterSpacing = (-0.5).sp
     ),
     displaySmall = TextStyle(
-        fontFamily = PlayfairDisplayFont,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 36.sp,
-        lineHeight = 44.sp,
+        fontFamily = InterFont,
+        fontWeight = FontWeight.Bold,
+        fontSize = 40.sp,
+        lineHeight = 48.sp,
         letterSpacing = 0.sp
     ),
 
-    // ── Headlines — Playfair Display (serif) ──
+    // ── Headlines — Inter, SemiBold ──
     headlineLarge = TextStyle(
-        fontFamily = PlayfairDisplayFont,
+        fontFamily = InterFont,
         fontWeight = FontWeight.SemiBold,
         fontSize = 32.sp,
         lineHeight = 40.sp,
         letterSpacing = 0.sp
     ),
     headlineMedium = TextStyle(
-        fontFamily = PlayfairDisplayFont,
-        fontWeight = FontWeight.Medium,
+        fontFamily = InterFont,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 28.sp,
         lineHeight = 36.sp,
         letterSpacing = 0.sp
     ),
     headlineSmall = TextStyle(
-        fontFamily = PlayfairDisplayFont,
-        fontWeight = FontWeight.Medium,
+        fontFamily = InterFont,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 24.sp,
         lineHeight = 32.sp,
         letterSpacing = 0.sp
     ),
 
-    // ── Titles — Lato (sans-serif) ──
+    // ── Titles — Inter, Medium ──
     titleLarge = TextStyle(
-        fontFamily = LatoFont,
-        fontWeight = FontWeight.Bold,
+        fontFamily = InterFont,
+        fontWeight = FontWeight.SemiBold,
         fontSize = 22.sp,
         lineHeight = 28.sp,
-        letterSpacing = 0.sp
+        letterSpacing = 0.5.sp
     ),
     titleMedium = TextStyle(
-        fontFamily = LatoFont,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 18.sp,
+        fontFamily = InterFont,
+        fontWeight = FontWeight.Medium,
+        fontSize = 16.sp,
         lineHeight = 24.sp,
-        letterSpacing = 0.15.sp
+        letterSpacing = 1.5.sp    // wider for that luxury spacing
     ),
     titleSmall = TextStyle(
-        fontFamily = LatoFont,
+        fontFamily = InterFont,
         fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
         lineHeight = 20.sp,
-        letterSpacing = 0.1.sp
+        letterSpacing = 1.sp
     ),
 
-    // ── Body — Lato (sans-serif) ──
+    // ── Body — Inter, Regular/Light ──
     bodyLarge = TextStyle(
-        fontFamily = LatoFont,
+        fontFamily = InterFont,
         fontWeight = FontWeight.Normal,
         fontSize = 16.sp,
-        lineHeight = 24.sp,
-        letterSpacing = 0.5.sp
+        lineHeight = 28.sp,     // generous 1.75 line-height
+        letterSpacing = 0.3.sp
     ),
     bodyMedium = TextStyle(
-        fontFamily = LatoFont,
+        fontFamily = InterFont,
         fontWeight = FontWeight.Normal,
         fontSize = 14.sp,
-        lineHeight = 20.sp,
+        lineHeight = 24.sp,     // 1.7 line-height
         letterSpacing = 0.25.sp
     ),
     bodySmall = TextStyle(
-        fontFamily = LatoFont,
-        fontWeight = FontWeight.Normal,
+        fontFamily = InterFont,
+        fontWeight = FontWeight.Light,
         fontSize = 12.sp,
-        lineHeight = 16.sp,
+        lineHeight = 20.sp,
         letterSpacing = 0.4.sp
     ),
 
-    // ── Labels — Lato (sans-serif) ──
+    // ── Labels — Inter, Medium, designed for ALL-CAPS ──
     labelLarge = TextStyle(
-        fontFamily = LatoFont,
+        fontFamily = InterFont,
         fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
         lineHeight = 20.sp,
-        letterSpacing = 0.1.sp
+        letterSpacing = 2.sp      // wide caps spacing
     ),
     labelMedium = TextStyle(
-        fontFamily = LatoFont,
+        fontFamily = InterFont,
         fontWeight = FontWeight.Medium,
         fontSize = 12.sp,
         lineHeight = 16.sp,
-        letterSpacing = 0.5.sp
+        letterSpacing = 1.5.sp
     ),
     labelSmall = TextStyle(
-        fontFamily = LatoFont,
+        fontFamily = InterFont,
         fontWeight = FontWeight.Medium,
-        fontSize = 11.sp,
-        lineHeight = 16.sp,
-        letterSpacing = 0.5.sp
+        fontSize = 10.sp,
+        lineHeight = 14.sp,
+        letterSpacing = 1.2.sp
     )
 )

@@ -16,17 +16,10 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -38,33 +31,31 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
-import androidx.tv.material3.Button
-import androidx.tv.material3.ButtonDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
+import com.dreamweddingstories.tv.components.PrimaryButton
+import com.dreamweddingstories.tv.components.SecondaryButton
+import com.dreamweddingstories.tv.components.GoldShimmerLine
+import com.dreamweddingstories.tv.components.PlayerControls
 import com.dreamweddingstories.tv.ui.theme.DarkBackground
-import com.dreamweddingstories.tv.ui.theme.ErrorRed
-import com.dreamweddingstories.tv.ui.theme.PlayerControlBg
-import com.dreamweddingstories.tv.ui.theme.AccentWhite
+import com.dreamweddingstories.tv.ui.theme.DreamAnimation
+import com.dreamweddingstories.tv.ui.theme.ErrorAmber
 import com.dreamweddingstories.tv.ui.theme.TextPrimary
 import com.dreamweddingstories.tv.ui.theme.TextSecondary
+import com.dreamweddingstories.tv.ui.theme.TextTertiary
 import com.dreamweddingstories.tv.utils.Constants
 import com.dreamweddingstories.tv.viewmodel.PlayerViewModel
 import kotlinx.coroutines.delay
-import java.util.Locale
 import kotlin.math.max
 
 @Composable
@@ -121,15 +112,13 @@ fun VideoPlayerScreen(
             val listener = object : Player.Listener {
                 override fun onIsPlayingChanged(playing: Boolean) {
                     isPlaying = playing
-                    android.util.Log.e("VideoPlayerScreen", "is playing: $playing")
                 }
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     isBuffering = playbackState == Player.STATE_BUFFERING
-                    android.util.Log.e("VideoPlayerScreen", "playback state: $playbackState")
                 }
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                     android.util.Log.e("VideoPlayerScreen", "Player Error: ${error.message}", error)
-                    viewModel.clearError() // reset and maybe show error UI?
+                    viewModel.clearError()
                 }
             }
             player.addListener(listener)
@@ -141,7 +130,7 @@ fun VideoPlayerScreen(
         }
     }
 
-    // MediaSession integration for TV remote media buttons
+    // MediaSession integration
     DisposableEffect(exoPlayer) {
         val player = exoPlayer ?: return@DisposableEffect onDispose { }
         val mediaSession = androidx.media3.session.MediaSession.Builder(context, player)
@@ -169,11 +158,8 @@ fun VideoPlayerScreen(
             .onPreviewKeyEvent { event ->
                 if (event.nativeKeyEvent.action == android.view.KeyEvent.ACTION_DOWN) {
                     val keyCode = event.nativeKeyEvent.keyCode
-
-                    // Show controls on any key
                     controlsVisible = true
 
-                    // Handle media keys
                     when (keyCode) {
                         android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE,
                         android.view.KeyEvent.KEYCODE_DPAD_CENTER -> {
@@ -226,15 +212,6 @@ fun VideoPlayerScreen(
                 modifier = Modifier.fillMaxSize()
             )
         } else if (state.isFallbackWebView && state.webViewUrl != null) {
-            val webView = remember { mutableStateOf<WebView?>(null) }
-            
-            LaunchedEffect(state.webViewUrl) {
-                val url = state.webViewUrl ?: return@LaunchedEffect
-                android.util.Log.e("VimeoWebView", "LAUNCHED_EFFECT_LOADING: $url")
-                val extraHeaders = mutableMapOf<String, String>()
-                extraHeaders["Referer"] = "https://dreamweddingstories.com"
-                webView.value?.loadUrl(url, extraHeaders)
-            }
 
             AndroidView(
                 factory = { ctx ->
@@ -246,8 +223,10 @@ fun VideoPlayerScreen(
                                     android.view.KeyEvent.KEYCODE_ENTER,
                                     android.view.KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> {
                                         evaluateJavascript("""
-                                            (function(){var v=document.querySelector('video');
-                                            if(v){if(v.paused)v.play();else v.pause();}})();
+                                            (function(){
+                                              var v=document.querySelector('video');
+                                              if(v){if(v.paused)v.play();else v.pause();}
+                                            })();
                                         """.trimIndent(), null)
                                         return true
                                     }
@@ -283,7 +262,6 @@ fun VideoPlayerScreen(
                             return super.dispatchKeyEvent(event)
                         }
                     }.apply {
-                        webView.value = this
                         layoutParams = FrameLayout.LayoutParams(
                             FrameLayout.LayoutParams.MATCH_PARENT,
                             FrameLayout.LayoutParams.MATCH_PARENT
@@ -291,42 +269,65 @@ fun VideoPlayerScreen(
                         setBackgroundColor(android.graphics.Color.BLACK)
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
-                        settings.databaseEnabled = true
                         settings.mediaPlaybackRequiresUserGesture = false
                         settings.loadWithOverviewMode = true
                         settings.useWideViewPort = true
                         settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
-                        settings.cacheMode = WebSettings.LOAD_DEFAULT
-                        settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-                        
+                        settings.allowContentAccess = true
+                        settings.allowFileAccess = true
+                        // Desktop Chrome UA — Vimeo serves the full player to desktop browsers
+                        settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+
                         webViewClient = object : android.webkit.WebViewClient() {
+                            override fun shouldInterceptRequest(
+                                view: WebView?,
+                                request: android.webkit.WebResourceRequest?
+                            ): android.webkit.WebResourceResponse? {
+                                // Let all requests through — no interception needed
+                                return null
+                            }
                             override fun onPageFinished(view: WebView?, url: String?) {
-                                android.util.Log.e("VimeoWebView", "PAGE_FINISHED: $url")
+                                android.util.Log.d("VimeoWebView", "PAGE_FINISHED: $url")
+                                // Force play in case autoplay was blocked
                                 view?.evaluateJavascript("""
                                     (function(){
-                                        var s=document.createElement('style');
-                                        s.textContent='video{object-fit:contain!important;width:100%!important;height:100%!important}';
-                                        document.head.appendChild(s);
+                                      var v = document.querySelector('video');
+                                      if(v && v.paused) { v.play(); }
                                     })();
                                 """.trimIndent(), null)
                             }
-                            override fun onReceivedSslError(view: WebView?, handler: android.webkit.SslErrorHandler?, error: android.net.http.SslError?) {
+                            override fun onReceivedSslError(
+                                view: WebView?,
+                                handler: android.webkit.SslErrorHandler?,
+                                error: android.net.http.SslError?
+                            ) {
                                 handler?.proceed()
                             }
-                            override fun onReceivedError(view: WebView?, request: android.webkit.WebResourceRequest?, error: android.webkit.WebResourceError?) {
+                            override fun onReceivedError(
+                                view: WebView?,
+                                request: android.webkit.WebResourceRequest?,
+                                error: android.webkit.WebResourceError?
+                            ) {
                                 android.util.Log.e("VimeoWebView", "ERROR: ${error?.errorCode} ${error?.description} for ${request?.url}")
                             }
                         }
                         webChromeClient = object : WebChromeClient() {
-                            override fun onConsoleMessage(consoleMessage: android.webkit.ConsoleMessage?): Boolean {
-                                android.util.Log.e("VimeoWebView", "JS_CONSOLE: ${consoleMessage?.message()}")
+                            override fun onConsoleMessage(msg: android.webkit.ConsoleMessage?): Boolean {
+                                android.util.Log.d("VimeoWebView", "JS: ${msg?.message()}")
                                 return true
                             }
                         }
-                        
+
                         isFocusable = true
                         isFocusableInTouchMode = true
                         requestFocus()
+
+                        // Load the Vimeo player URL with Referer header pointing to our
+                        // registered domain. This is a real navigation (no ORB blocking)
+                        // and Vimeo's embed validation accepts it because of the Referer.
+                        val playerUrl = state.webViewUrl ?: return@apply
+                        android.util.Log.d("VimeoWebView", "Loading: $playerUrl")
+                        loadUrl(playerUrl, mapOf("Referer" to "https://dreamweddingstories.com"))
                     }
                 },
                 update = { },
@@ -334,7 +335,7 @@ fun VideoPlayerScreen(
             )
         }
 
-        // ── Buffering indicator ──
+        // ── Buffering indicator — gold shimmer, not spinner ──
         if (state.isLoading || isBuffering) {
             Box(
                 modifier = Modifier.fillMaxSize(),
@@ -342,250 +343,95 @@ fun VideoPlayerScreen(
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    CircularProgressIndicator(
-                        color = AccentWhite,
-                        modifier = Modifier.size(48.dp),
-                        strokeWidth = 3.dp
-                    )
+                    GoldShimmerLine(modifier = Modifier.width(200.dp))
                     Text(
-                        text = "Loading...",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = TextSecondary
+                        text = "LOADING",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = TextTertiary
                     )
                 }
             }
         }
 
-        // ── Error state ──
+        // ── Error state — warm amber ──
         if (!state.error.isNullOrBlank()) {
             Column(
                 modifier = Modifier.align(Alignment.Center),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 Text(
                     text = state.error ?: "Playback failed",
-                    color = ErrorRed,
+                    color = ErrorAmber,
                     style = MaterialTheme.typography.bodyLarge
                 )
-                Button(
+                PrimaryButton(
+                    text = "Retry",
                     onClick = {
                         controlsVisible = true
                         viewModel.loadStream(videoId, vimeoVideoId, title)
                     },
-                    colors = ButtonDefaults.colors(containerColor = AccentWhite, contentColor = DarkBackground)
-                ) {
-                    Text("Retry", fontWeight = FontWeight.Bold)
-                }
-                Button(
+                    modifier = Modifier.width(180.dp)
+                )
+                SecondaryButton(
+                    text = "Back",
                     onClick = onBack,
-                    colors = ButtonDefaults.colors(
-                        containerColor = Color.Transparent,
-                        contentColor = TextSecondary,
-                        focusedContainerColor = AccentWhite.copy(alpha = 0.15f),
-                        focusedContentColor = AccentWhite
-                    )
-                ) {
-                    Text("Back")
-                }
-            }
-        }
-
-        // ── Custom Playback Controls ──
-        AnimatedVisibility(
-            visible = controlsVisible && state.error.isNullOrBlank() && !state.isFallbackWebView,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.BottomCenter)
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, PlayerControlBg, PlayerControlBg)
-                        )
-                    )
-                    .padding(horizontal = 32.dp, vertical = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // Video title
-                Text(
-                    text = if (state.title.isBlank()) title else state.title,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = TextPrimary,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-
-                // ── Seek bar ──
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    // Progress track
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(6.dp)
-                            .clip(RoundedCornerShape(3.dp))
-                            .background(TextPrimary.copy(alpha = 0.15f))
-                    ) {
-                        val fraction = if (durationMs > 0) positionMs.toFloat() / durationMs else 0f
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(fraction.coerceIn(0f, 1f))
-                                .height(6.dp)
-                                .clip(RoundedCornerShape(3.dp))
-                                .background(
-                                    Brush.horizontalGradient(
-                                        listOf(AccentWhite, AccentWhite.copy(alpha = 0.7f))
-                                    )
-                                )
-                        )
-                    }
-
-                    // Time labels
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = formatTime(positionMs),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = TextSecondary
-                        )
-                        Text(
-                            text = formatTime(durationMs),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = TextSecondary
-                        )
-                    }
-                }
-
-                // ── Control buttons ──
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Back
-                    ControlButton(
-                        text = "←",
-                        label = "Back",
-                        onClick = {
-                            viewModel.savePlaybackPosition(videoId, positionMs)
-                            onBack()
-                        }
-                    )
-
-                    // Rewind 10s
-                    ControlButton(
-                        text = "↻",
-                        label = "-10s",
-                        onClick = {
-                            exoPlayer?.seekTo(max(0L, positionMs - Constants.SEEK_INTERVAL_MS))
-                        }
-                    )
-
-                    // Play / Pause (primary)
-                    Button(
-                        onClick = {
-                            exoPlayer?.let { p ->
-                                if (p.isPlaying) p.pause() else p.play()
-                            }
-                        },
-                        modifier = Modifier.size(56.dp),
-                        shape = ButtonDefaults.shape(shape = CircleShape),
-                        colors = ButtonDefaults.colors(
-                            containerColor = AccentWhite,
-                            contentColor = DarkBackground,
-                            focusedContainerColor = AccentWhite.copy(alpha = 0.85f),
-                            focusedContentColor = DarkBackground
-                        )
-                    ) {
-                        Text(
-                            text = if (isPlaying) "⏸" else "▶",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-
-                    // Forward 10s
-                    ControlButton(
-                        text = "↺",
-                        label = "+10s",
-                        onClick = {
-                            exoPlayer?.seekTo(positionMs + Constants.SEEK_INTERVAL_MS)
-                        }
-                    )
-                }
-            }
-        }
-
-        // ── Title overlay at top when controls visible ──
-        AnimatedVisibility(
-            visible = controlsVisible && state.error.isNullOrBlank() && !state.isFallbackWebView,
-            enter = fadeIn(),
-            exit = fadeOut(),
-            modifier = Modifier.align(Alignment.TopCenter)
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(PlayerControlBg, Color.Transparent)
-                        )
-                    )
-                    .padding(horizontal = 32.dp, vertical = 16.dp)
-            ) {
-                Text(
-                    text = "Dream Wedding Stories",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = AccentWhite.copy(alpha = 0.7f)
+                    modifier = Modifier.width(180.dp)
                 )
             }
         }
-    }
-}
 
-/* ──────────────────────────────────────────────────────────────
-   Control Button — translucent with icon + label
-   ────────────────────────────────────────────────────────────── */
-@Composable
-private fun ControlButton(text: String, label: String, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        colors = ButtonDefaults.colors(
-            containerColor = TextPrimary.copy(alpha = 0.1f),
-            contentColor = TextPrimary,
-            focusedContainerColor = TextPrimary.copy(alpha = 0.25f),
-            focusedContentColor = TextPrimary
-        ),
-        shape = ButtonDefaults.shape(shape = RoundedCornerShape(12.dp))
-    ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(text = text, style = MaterialTheme.typography.titleMedium)
-            Text(text = label, style = MaterialTheme.typography.labelMedium)
+        // ── Cinematic Player Controls (ExoPlayer only) ──
+        if (state.error.isNullOrBlank() && !state.isFallbackWebView) {
+            // Top controls
+            Box(modifier = Modifier.align(Alignment.TopCenter)) {
+                PlayerControls(
+                    visible = controlsVisible,
+                    title = if (state.title.isBlank()) title else state.title,
+                    isPlaying = isPlaying,
+                    positionMs = positionMs,
+                    durationMs = durationMs,
+                    onPlayPause = {
+                        exoPlayer?.let { p -> if (p.isPlaying) p.pause() else p.play() }
+                    },
+                    onSeekBack = {
+                        exoPlayer?.seekTo(max(0L, positionMs - Constants.SEEK_INTERVAL_MS))
+                    },
+                    onSeekForward = {
+                        exoPlayer?.seekTo(positionMs + Constants.SEEK_INTERVAL_MS)
+                    },
+                    onBack = {
+                        viewModel.savePlaybackPosition(videoId, positionMs)
+                        onBack()
+                    }
+                )
+            }
+
+            // Bottom controls (need separate alignment)
+            Box(modifier = Modifier.align(Alignment.BottomCenter)) {
+                PlayerControls(
+                    visible = controlsVisible,
+                    title = if (state.title.isBlank()) title else state.title,
+                    isPlaying = isPlaying,
+                    positionMs = positionMs,
+                    durationMs = durationMs,
+                    onPlayPause = {
+                        exoPlayer?.let { p -> if (p.isPlaying) p.pause() else p.play() }
+                    },
+                    onSeekBack = {
+                        exoPlayer?.seekTo(max(0L, positionMs - Constants.SEEK_INTERVAL_MS))
+                    },
+                    onSeekForward = {
+                        exoPlayer?.seekTo(positionMs + Constants.SEEK_INTERVAL_MS)
+                    },
+                    onBack = {
+                        viewModel.savePlaybackPosition(videoId, positionMs)
+                        onBack()
+                    }
+                )
+            }
         }
-    }
-}
-
-/* ──────────────────────────────────────────────────────────────
-   Time formatter — ms → "mm:ss" or "hh:mm:ss"
-   ────────────────────────────────────────────────────────────── */
-private fun formatTime(ms: Long): String {
-    if (ms <= 0) return "0:00"
-    val totalSeconds = ms / 1000
-    val hours = totalSeconds / 3600
-    val minutes = (totalSeconds % 3600) / 60
-    val seconds = totalSeconds % 60
-    return if (hours > 0) {
-        String.format(Locale.US, "%d:%02d:%02d", hours, minutes, seconds)
-    } else {
-        String.format(Locale.US, "%d:%02d", minutes, seconds)
     }
 }

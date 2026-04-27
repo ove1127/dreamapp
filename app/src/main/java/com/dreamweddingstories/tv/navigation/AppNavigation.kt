@@ -5,11 +5,6 @@ import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -25,6 +20,7 @@ import com.dreamweddingstories.tv.screens.LoginScreen
 import com.dreamweddingstories.tv.screens.SplashScreen
 import com.dreamweddingstories.tv.screens.VideoDetailScreen
 import com.dreamweddingstories.tv.screens.VideoPlayerScreen
+import com.dreamweddingstories.tv.ui.theme.DreamAnimation
 import com.dreamweddingstories.tv.viewmodel.AuthViewModel
 import com.dreamweddingstories.tv.viewmodel.HomeViewModel
 import com.dreamweddingstories.tv.viewmodel.PlayerViewModel
@@ -42,33 +38,6 @@ private sealed class AppRoute(val route: String) {
         }
     }
 }
-
-// ── Transition helpers ──
-private const val TRANSITION_MS = 350
-
-private fun enterSlideIn(): EnterTransition =
-    fadeIn(tween(TRANSITION_MS)) + slideInHorizontally(
-        initialOffsetX = { it / 4 },
-        animationSpec = tween(TRANSITION_MS)
-    )
-
-private fun exitSlideOut(): ExitTransition =
-    fadeOut(tween(TRANSITION_MS)) + slideOutHorizontally(
-        targetOffsetX = { -it / 4 },
-        animationSpec = tween(TRANSITION_MS)
-    )
-
-private fun popEnterSlideIn(): EnterTransition =
-    fadeIn(tween(TRANSITION_MS)) + slideInHorizontally(
-        initialOffsetX = { -it / 4 },
-        animationSpec = tween(TRANSITION_MS)
-    )
-
-private fun popExitSlideOut(): ExitTransition =
-    fadeOut(tween(TRANSITION_MS)) + slideOutHorizontally(
-        targetOffsetX = { it / 4 },
-        animationSpec = tween(TRANSITION_MS)
-    )
 
 @Composable
 fun AppNavigation(
@@ -90,16 +59,17 @@ fun AppNavigation(
     NavHost(
         navController = navController,
         startDestination = AppRoute.Splash.route,
-        enterTransition = { enterSlideIn() },
-        exitTransition = { exitSlideOut() },
-        popEnterTransition = { popEnterSlideIn() },
-        popExitTransition = { popExitSlideOut() }
+        // ── Cross-dissolve everywhere — silk easing ──
+        enterTransition = { DreamAnimation.screenEnter() },
+        exitTransition = { DreamAnimation.screenExit() },
+        popEnterTransition = { DreamAnimation.screenEnter() },
+        popExitTransition = { DreamAnimation.screenExit() }
     ) {
         // ── Splash ──
         composable(
             route = AppRoute.Splash.route,
-            enterTransition = { fadeIn(tween(300)) },
-            exitTransition = { fadeOut(tween(400)) }
+            enterTransition = { DreamAnimation.screenEnter() },
+            exitTransition = { DreamAnimation.screenExit() }
         ) {
             SplashScreen(
                 onFinished = {
@@ -118,8 +88,8 @@ fun AppNavigation(
         // ── Login ──
         composable(
             route = AppRoute.Login.route,
-            enterTransition = { fadeIn(tween(400)) },
-            exitTransition = { fadeOut(tween(300)) }
+            enterTransition = { DreamAnimation.screenEnter() },
+            exitTransition = { DreamAnimation.screenExit() }
         ) {
             LoginScreen(
                 authState = authState,
@@ -198,8 +168,8 @@ fun AppNavigation(
                 navArgument("title") { type = NavType.StringType }
             ),
             // Immediate transition for player
-            enterTransition = { fadeIn(tween(200)) },
-            exitTransition = { fadeOut(tween(200)) }
+            enterTransition = { DreamAnimation.playerEnter() },
+            exitTransition = { DreamAnimation.playerExit() }
         ) { backStackEntry ->
             val videoId = backStackEntry.arguments?.getString("videoId").orEmpty()
             val vimeoVideoId = backStackEntry.arguments?.getString("vimeoVideoId").orEmpty()

@@ -6,12 +6,16 @@ import androidx.compose.runtime.Composable
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.darkColorScheme
 
-private val DarkColorScheme = darkColorScheme(
-    primary = AccentWhite,
+// ═══════════════════════════════════════════════════════
+// CINEMATIC LUXURY EDITORIAL — Theme
+// ═══════════════════════════════════════════════════════
+
+private val CinematicColorScheme = darkColorScheme(
+    primary = AccentGold,
     onPrimary = DarkBackground,
-    secondary = AccentWhite,
+    secondary = AccentGoldDeep,
     onSecondary = DarkBackground,
-    tertiary = ShimmerWhite,
+    tertiary = GoldShimmer,
     onTertiary = DarkBackground,
     background = DarkBackground,
     onBackground = TextPrimary,
@@ -19,9 +23,9 @@ private val DarkColorScheme = darkColorScheme(
     onSurface = TextPrimary,
     surfaceVariant = CardBackground,
     onSurfaceVariant = TextSecondary,
-    error = ErrorRed,
-    onError = TextPrimary,
-    border = DividerWhite
+    error = ErrorAmber,
+    onError = DarkBackground,
+    border = GoldDivider
 )
 
 @Composable
@@ -29,7 +33,7 @@ fun DreamWeddingTheme(
     content: @Composable () -> Unit
 ) {
     MaterialTheme(
-        colorScheme = DarkColorScheme,
+        colorScheme = CinematicColorScheme,
         typography = Typography,
         content = content
     )
