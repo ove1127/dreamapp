@@ -15,6 +15,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.dreamweddingstories.tv.screens.EventSelectionScreen
 import com.dreamweddingstories.tv.screens.HomeScreen
 import com.dreamweddingstories.tv.screens.LoginScreen
 import com.dreamweddingstories.tv.screens.SplashScreen
@@ -28,6 +29,7 @@ import com.dreamweddingstories.tv.viewmodel.PlayerViewModel
 private sealed class AppRoute(val route: String) {
     data object Splash : AppRoute("splash")
     data object Login : AppRoute("login")
+    data object EventSelect : AppRoute("eventSelect")
     data object Home : AppRoute("home")
     data object VideoDetail : AppRoute("videoDetail/{videoId}") {
         fun create(videoId: String) = "videoDetail/$videoId"
@@ -49,17 +51,12 @@ fun AppNavigation(
     val authState = authViewModel.authState.collectAsState().value
     val currentUser = authViewModel.currentUser.collectAsState().value
     val videosState = homeViewModel.videosState.collectAsState().value
+    val eventsState = homeViewModel.eventsState.collectAsState().value
     val selectedVideoState = homeViewModel.selectedVideoState.collectAsState().value
-
-    // Load videos when user is available
-    LaunchedEffect(currentUser?.uid) {
-        currentUser?.let { homeViewModel.loadAssignedVideos(it) }
-    }
 
     NavHost(
         navController = navController,
         startDestination = AppRoute.Splash.route,
-        // ── Cross-dissolve everywhere — silk easing ──
         enterTransition = { DreamAnimation.screenEnter() },
         exitTransition = { DreamAnimation.screenExit() },
         popEnterTransition = { DreamAnimation.screenEnter() },
@@ -74,7 +71,7 @@ fun AppNavigation(
             SplashScreen(
                 onFinished = {
                     val target = if (authViewModel.hasActiveSession()) {
-                        AppRoute.Home.route
+                        AppRoute.EventSelect.route
                     } else {
                         AppRoute.Login.route
                     }
@@ -97,20 +94,59 @@ fun AppNavigation(
                 onDemoSignIn = authViewModel::signInAsDemoUser,
                 onDismissError = authViewModel::clearAuthError,
                 onLoginSuccess = {
-                    navController.navigate(AppRoute.Home.route) {
+                    navController.navigate(AppRoute.EventSelect.route) {
                         popUpTo(AppRoute.Login.route) { inclusive = true }
                     }
                 }
             )
         }
 
-        // ── Home ──
+        // ── Event Selection (NEW — Netflix-style function picker) ──
+        composable(route = AppRoute.EventSelect.route) {
+            val activity = LocalContext.current as? Activity
+
+            BackHandler {
+                activity?.finish()
+            }
+
+            if (currentUser == null) {
+                LaunchedEffect(Unit) {
+                    navController.navigate(AppRoute.Login.route) {
+                        popUpTo(AppRoute.EventSelect.route) { inclusive = true }
+                    }
+                }
+            } else {
+                // Load events from user object
+                LaunchedEffect(currentUser.uid) {
+                    homeViewModel.loadEvents(currentUser)
+                }
+
+                EventSelectionScreen(
+                    user = currentUser,
+                    eventsState = eventsState,
+                    onEventSelected = { event ->
+                        homeViewModel.loadVideosForEvent(event)
+                        navController.navigate(AppRoute.Home.route)
+                    },
+                    onLogout = {
+                        authViewModel.signOut()
+                        navController.navigate(AppRoute.Login.route) {
+                            popUpTo(AppRoute.EventSelect.route) { inclusive = true }
+                        }
+                    }
+                )
+            }
+        }
+
+        // ── Home (filtered to selected event's videos) ──
         composable(route = AppRoute.Home.route) {
             val activity = LocalContext.current as? Activity
 
-            // Back from Home = exit app
+            // Back from Home → go back to event selection
             BackHandler {
-                activity?.finish()
+                navController.navigate(AppRoute.EventSelect.route) {
+                    popUpTo(AppRoute.Home.route) { inclusive = true }
+                }
             }
 
             if (currentUser == null) {
@@ -132,7 +168,11 @@ fun AppNavigation(
                             popUpTo(AppRoute.Home.route) { inclusive = true }
                         }
                     },
-                    onRetry = { homeViewModel.loadAssignedVideos(currentUser) }
+                    onRetry = {
+                        currentUser.let { u ->
+                            homeViewModel.loadAssignedVideos(u)
+                        }
+                    }
                 )
             }
         }
@@ -167,7 +207,6 @@ fun AppNavigation(
                 navArgument("vimeoVideoId") { type = NavType.StringType },
                 navArgument("title") { type = NavType.StringType }
             ),
-            // Immediate transition for player
             enterTransition = { DreamAnimation.playerEnter() },
             exitTransition = { DreamAnimation.playerExit() }
         ) { backStackEntry ->

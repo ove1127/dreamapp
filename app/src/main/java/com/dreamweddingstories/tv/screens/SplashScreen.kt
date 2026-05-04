@@ -2,155 +2,110 @@
 
 package com.dreamweddingstories.tv.screens
 
+import android.net.Uri
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.tv.material3.MaterialTheme
-import androidx.tv.material3.Text
-import com.dreamweddingstories.tv.ui.theme.AccentGold
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.ui.PlayerView
+import com.dreamweddingstories.tv.R
 import com.dreamweddingstories.tv.ui.theme.DarkBackground
-import com.dreamweddingstories.tv.ui.theme.DreamAnimation
-import com.dreamweddingstories.tv.ui.theme.GoldDivider
-import com.dreamweddingstories.tv.ui.theme.TextPrimary
-import com.dreamweddingstories.tv.ui.theme.TextSecondary
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 /**
- * Splash Screen — Cinematic Luxury Editorial
+ * Splash Screen — Full-screen logo opener video
  *
- * Full black (#080B14). Centre: thin gold wedding band ring
- * draws itself in 2s stroke animation. Wordmark fades in below.
- * Hold 1.5s. Cross-dissolve to Login.
+ * Plays `res/raw/splash_video.mp4` full-screen using ExoPlayer.
+ * Navigates to the next screen as soon as the video ends.
+ * If the video resource is missing, falls back to navigating immediately.
  */
 @Composable
 fun SplashScreen(onFinished: () -> Unit) {
-    // ── Ring stroke animation (0 → 360 degrees) ──
-    val ringSweep = remember { Animatable(0f) }
+    val context = LocalContext.current
+    val fadeAlpha = remember { Animatable(0f) }
+    var videoFinished by remember { mutableStateOf(false) }
 
-    // ── Fade-in animations ──
-    val ringAlpha = remember { Animatable(0f) }
-    val wordmarkAlpha = remember { Animatable(0f) }
-    val ruleAlpha = remember { Animatable(0f) }
-    val taglineAlpha = remember { Animatable(0f) }
+    // Build ExoPlayer and attach listener
+    val exoPlayer = remember {
+        ExoPlayer.Builder(context).build().apply {
+            // Check if the raw resource exists using getIdentifier for robustness
+            val resId = context.resources.getIdentifier("splash_video", "raw", context.packageName)
 
+            if (resId != 0) {
+                val uri = Uri.parse("android.resource://${context.packageName}/$resId")
+                setMediaItem(MediaItem.fromUri(uri))
+                prepare()
+                playWhenReady = true
+                volume = 0f  // Muted — change to 1f if you want audio
+                repeatMode = Player.REPEAT_MODE_OFF
+            } else {
+                videoFinished = true // No video found
+            }
+
+            addListener(object : Player.Listener {
+                override fun onPlaybackStateChanged(state: Int) {
+                    if (state == Player.STATE_ENDED) {
+                        videoFinished = true
+                    }
+                }
+            })
+        }
+    }
+
+    // If no video resource, navigate immediately
     LaunchedEffect(Unit) {
-        // Ring draws itself
-        launch {
-            ringAlpha.animateTo(1f, tween(400, easing = DreamAnimation.SilkEasing))
+        val resId = context.resources.getIdentifier("splash_video", "raw", context.packageName)
+        if (resId == 0) {
+            onFinished()
         }
-        launch {
-            ringSweep.animateTo(
-                360f,
-                tween(DreamAnimation.SPLASH_RING, easing = LinearEasing)
-            )
+        // Fade the player in smoothly
+        fadeAlpha.animateTo(1f, tween(600))
+    }
+
+    // Navigate when video ends
+    LaunchedEffect(videoFinished) {
+        if (videoFinished) {
+            onFinished()
         }
+    }
 
-        // After ring completes, wordmark appears
-        delay(DreamAnimation.SPLASH_RING.toLong() + 200)
-
-        launch {
-            wordmarkAlpha.animateTo(1f, DreamAnimation.silkTween(DreamAnimation.SLOW))
+    // Release player when leaving the screen
+    DisposableEffect(Unit) {
+        onDispose {
+            exoPlayer.release()
         }
-
-        delay(DreamAnimation.STAGGER_DELAY.toLong() * 2)
-
-        launch {
-            ruleAlpha.animateTo(1f, DreamAnimation.silkTween())
-        }
-
-        delay(DreamAnimation.STAGGER_DELAY.toLong())
-
-        launch {
-            taglineAlpha.animateTo(1f, DreamAnimation.silkTween())
-        }
-
-        // Hold 1.5s then navigate
-        delay(1500)
-        onFinished()
     }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBackground),
-        contentAlignment = Alignment.Center
+            .background(DarkBackground)
+            .alpha(fadeAlpha.value)
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            // ── Wedding band ring — thin gold stroke animation ──
-            Canvas(
-                modifier = Modifier
-                    .size(80.dp)
-                    .alpha(ringAlpha.value)
-            ) {
-                drawArc(
-                    color = AccentGold,
-                    startAngle = -90f,
-                    sweepAngle = ringSweep.value,
-                    useCenter = false,
-                    style = Stroke(width = 1.5f)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-
-            // ── Wordmark ──
-            Text(
-                text = "DREAM WEDDING STORIES",
-                style = MaterialTheme.typography.headlineMedium,
-                color = TextPrimary,
-                fontWeight = FontWeight.Light,
-                textAlign = TextAlign.Center,
-                letterSpacing = 6.sp,
-                modifier = Modifier.alpha(wordmarkAlpha.value)
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // ── Gold horizontal rule ──
-            Box(
-                modifier = Modifier
-                    .alpha(ruleAlpha.value)
-                    .width(120.dp)
-                    .height(1.dp)
-                    .background(GoldDivider)
-            )
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // ── Tagline ──
-            Text(
-                text = "YOUR LOVE STORY  ·  BEAUTIFULLY PRESERVED",
-                style = MaterialTheme.typography.labelMedium,
-                color = TextSecondary,
-                fontWeight = FontWeight.Light,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.alpha(taglineAlpha.value)
-            )
-        }
+        AndroidView(
+            factory = { ctx ->
+                PlayerView(ctx).apply {
+                    player = exoPlayer
+                    useController = false          // No playback controls
+                    setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER)
+                    resizeMode = androidx.media3.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM // Fill screen
+                }
+            },
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
